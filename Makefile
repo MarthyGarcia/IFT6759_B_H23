@@ -4,8 +4,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
+export PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROFILE = default
 PROJECT_NAME = time_series
 PYTHON_INTERPRETER = python3
@@ -36,11 +35,12 @@ clean:
 
 ## Lint using black
 lint:
+	isort src
 	black src setup.py
 
 ## Download Data from GDrive
 sync_data:
-	@echo "data synchronization script not yet implemented"
+	$(PYTHON_INTERPRETER) src/gdrive/make_sync_data.py
 
 ## Set up python interpreter environment
 create_environment:
