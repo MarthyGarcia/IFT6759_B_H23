@@ -34,9 +34,9 @@ clean:
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
 
-## Lint using flake8
+## Lint using black
 lint:
-	flake8 src
+	black src setup.py
 
 ## Upload Data to GDrive
 sync_data:
