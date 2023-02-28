@@ -38,7 +38,7 @@ clean:
 lint:
 	black src setup.py
 
-## Upload Data to GDrive
+## Download Data from GDrive
 sync_data:
 	@echo "data synchronization script not yet implemented"
 
