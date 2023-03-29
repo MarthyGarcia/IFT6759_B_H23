@@ -10,7 +10,6 @@ from src.pipeline.experiment import Experiment
 
 
 class ExperimentPipeline:
-
     def __init__(self, params: Experiment):
         self.params = params
         self.data = None
@@ -27,54 +26,52 @@ class ExperimentPipeline:
         train, test = series.split_before(0.80)
         train, valid = train.split_before(0.75)
 
-        return {
-            'train': train,
-            'valid': valid,
-            'test': test
-        }
+        return {"train": train, "valid": valid, "test": test}
 
     def run(self):
-        print('Fetching Data ...')
+        print("Fetching Data ...")
         series = self.get_processed_data()
         self.data = data = self.split_dataset(series)
 
         # TODO hparam search (bayes opt)
         # TODO instantiate model with params
 
-        print('Fitting Model ...')
+        print("Fitting Model ...")
         model = self.params.model()  # TODO params
-        model.fit(data['train'])
+        model.fit(data["train"])
 
         retrain = True if isinstance(model, LocalForecastingModel) else False
 
-        print('Computing Valid Error ...')
+        print("Computing Valid Error ...")
         valid_error = model.backtest(
-            data['valid'],
+            data["valid"],
             stride=self.params.stride,
             metric=self.params.metrics,
             forecast_horizon=self.params.horizon,
             retrain=retrain,
-            verbose=True
+            verbose=True,
         )
 
-        print('Computing Test Error ...')
+        print("Computing Test Error ...")
         test_error = model.backtest(
-            data['test'],
+            data["test"],
             stride=self.params.stride,
             metric=self.params.metrics,
             forecast_horizon=self.params.horizon,
             retrain=retrain,
-            verbose=True
+            verbose=True,
         )
 
-        print('Done!')
+        print("Done!")
 
         # TODO return all metrics
 
     def hparam_search(self):
         def print_callback(study, trial):
             print(f"Current value: {trial.value}, Current params: {trial.params}")
-            print(f"Best value: {study.best_value}, Best params: {study.best_trial.params}")
+            print(
+                f"Best value: {study.best_value}, Best params: {study.best_trial.params}"
+            )
 
         study = optuna.create_study(direction="minimize")
         study.optimize(self.objective, timeout=7200, callbacks=[print_callback])
@@ -95,22 +92,19 @@ class ExperimentPipeline:
         # include_dayofweek = trial.suggest_categorical("dayofweek", [False, True])
 
         model = self.params.model()  # TODO params suggestion
-        model.fit(self.data['train'])
+        model.fit(self.data["train"])
 
         retrain = True if isinstance(model, LocalForecastingModel) else False
         valid_error = model.backtest(
-            self.data['valid'],
+            self.data["valid"],
             stride=self.params.stride,
             metric=self.params.metrics,
             forecast_horizon=self.params.horizon,
             retrain=retrain,
-            verbose=True
+            verbose=True,
         )
 
         # TODO dynamically setup
         kernel_size = trial.suggest_int("kernel_size", 5, 25)
 
         return valid_error if valid_error != np.nan else float("inf")
-
-
-

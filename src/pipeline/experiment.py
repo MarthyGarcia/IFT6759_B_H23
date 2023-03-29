@@ -10,6 +10,7 @@ class Experiment:
     """
     Immutable dataclass to store the parameters of an experiment
     """
+
     dataset: str
     preprocessing = Pipeline([])
     model: Type[ForecastingModel]
