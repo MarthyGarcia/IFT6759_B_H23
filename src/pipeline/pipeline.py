@@ -6,7 +6,7 @@ from optuna import Trial
 from optuna.visualization import plot_optimization_history, plot_param_importances
 
 from src.data.dataset import Dataset
-from src.pipeline.experiment import Experiment
+from src.pipeline.experiment import Experiment, BayesOptHyperParameter
 
 
 class ExperimentPipeline:
@@ -31,80 +31,60 @@ class ExperimentPipeline:
     def run(self):
         print("Fetching Data ...")
         series = self.get_processed_data()
-        self.data = data = self.split_dataset(series)
+        self.data = self.split_dataset(series)
 
-        # TODO hparam search (bayes opt)
-        # TODO instantiate model with params
+        print("Beginning Optimization")
+        if self.is_bayes_opt():
+            self._hparam_search()
+        else:
+            obj = self._objective()
+            print(f"value: {obj}")
 
-        print("Fitting Model ...")
-        model = self.params.model()  # TODO params
-        model.fit(data["train"])
+    def is_bayes_opt(self) -> bool:
+        parameter_types = map(type, self.params.hyper_parameters)
+        return BayesOptHyperParameter in parameter_types
 
-        retrain = True if isinstance(model, LocalForecastingModel) else False
-
-        print("Computing Valid Error ...")
-        valid_error = model.backtest(
-            data["valid"],
-            stride=self.params.stride,
-            metric=self.params.metrics,
-            forecast_horizon=self.params.horizon,
-            retrain=retrain,
-            verbose=True,
-        )
-
-        print("Computing Test Error ...")
-        test_error = model.backtest(
-            data["test"],
-            stride=self.params.stride,
-            metric=self.params.metrics,
-            forecast_horizon=self.params.horizon,
-            retrain=retrain,
-            verbose=True,
-        )
-
-        print("Done!")
-
-        # TODO return all metrics
-
-    def hparam_search(self):
+    def _hparam_search(self):
         def print_callback(study, trial):
             print(f"Current value: {trial.value}, Current params: {trial.params}")
-            print(
-                f"Best value: {study.best_value}, Best params: {study.best_trial.params}"
-            )
+            print(f"Best value: {study.best_value}, Best params: {study.best_trial.params}")
 
         study = optuna.create_study(direction="minimize")
-        study.optimize(self.objective, timeout=7200, callbacks=[print_callback])
+        study.optimize(self._objective, timeout=self.params.optuna_timeout, callbacks=[print_callback])
 
         print(f"Best value: {study.best_value}, Best params: {study.best_trial.params}")
         plot_optimization_history(study)
-        # plot_contour(study, params=["lr", "num_filters"])
         plot_param_importances(study)
 
-    def objective(self, trial: Trial):
-        # Other hyperparameters
-        # kernel_size = trial.suggest_int("kernel_size", 5, 25)
-        # num_filters = trial.suggest_int("num_filters", 5, 25)
-        # weight_norm = trial.suggest_categorical("weight_norm", [False, True])
-        # dilation_base = trial.suggest_int("dilation_base", 2, 4)
-        # dropout = trial.suggest_float("dropout", 0.0, 0.4)
-        # lr = trial.suggest_float("lr", 5e-5, 1e-3, log=True)
-        # include_dayofweek = trial.suggest_categorical("dayofweek", [False, True])
+    def _objective(self, trial: Trial = None):
 
-        model = self.params.model()  # TODO params suggestion
-        model.fit(self.data["train"])
+        # get parameters from experiment definition
+        trial_hparams = dict()
+        for hparam in self.params.hyper_parameters:
+            if type(hparam) == BayesOptHyperParameter:
+                # call trial.suggest_method()
+                value = getattr(trial, hparam.optuna_suggest_method)(name= hparam.name, **hparam.value)
+            else:
+                value = hparam.value
+            trial_hparams[hparam.name] = value
 
-        retrain = True if isinstance(model, LocalForecastingModel) else False
+        # define and fit model
+        model = self.params.model(**trial_hparams)
+
+        # model.fit(self.data["train"][-self.params.n_train_samples:])
+        #
+        # # get predictions
+        # preds = model.predict(n=self.params.horizon)
+        # truth = self.data['valid'][0:self.params.horizon]
+
         valid_error = model.backtest(
-            self.data["valid"],
-            stride=self.params.stride,
-            metric=self.params.metrics,
-            forecast_horizon=self.params.horizon,
-            retrain=retrain,
-            verbose=True,
+            series=self.data['train'].append(self.data['valid']),
+            start=len(self.data['train']),
+            train_length=self.params.n_train_samples,
+            stride=len(self.data['valid']) // self.params.n_backtest,
+            metric=self.params.metric,
+            retrain=True,
+            verbose=True
         )
-
-        # TODO dynamically setup
-        kernel_size = trial.suggest_int("kernel_size", 5, 25)
 
         return valid_error if valid_error != np.nan else float("inf")
