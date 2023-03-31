@@ -71,12 +71,6 @@ class ExperimentPipeline:
         # define and fit model
         model = self.params.model(**trial_hparams)
 
-        # model.fit(self.data["train"][-self.params.n_train_samples:])
-        #
-        # # get predictions
-        # preds = model.predict(n=self.params.horizon)
-        # truth = self.data['valid'][0:self.params.horizon]
-
         valid_error = model.backtest(
             series=self.data['train'].append(self.data['valid']),
             start=len(self.data['train']),

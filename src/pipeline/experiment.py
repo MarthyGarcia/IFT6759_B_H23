@@ -32,7 +32,7 @@ class Experiment:
     """
 
     dataset: str
-    preprocessing = Pipeline([])
+    preprocessing: Pipeline
     model: Type[ForecastingModel]
     metric: callable
     hyper_parameters: list[HyperParameter | BayesOptHyperParameter]
