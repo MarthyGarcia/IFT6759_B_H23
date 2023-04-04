@@ -5,6 +5,7 @@ from darts import TimeSeries
 from darts.models.forecasting.forecasting_model import LocalForecastingModel
 from optuna import Trial
 from optuna.visualization import plot_optimization_history, plot_param_importances
+from tqdm import tqdm
 
 from src.data.dataset import Dataset
 from src.pipeline.experiment import Experiment, BayesOptHyperParameter
