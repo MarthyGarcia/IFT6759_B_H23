@@ -77,7 +77,7 @@ class ExperimentPipeline:
             train_length=self.params.n_train_samples,
             stride=len(self.data['valid']) // self.params.n_backtest,
             metric=self.params.metric,
-            retrain=True,
+            retrain=isinstance(model, LocalForecastingModel),
             verbose=True
         )
 
