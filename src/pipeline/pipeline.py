@@ -71,13 +71,17 @@ class ExperimentPipeline:
         # define and fit model
         model = self.params.model(**trial_hparams)
 
+        should_retrain_model = isinstance(model, LocalForecastingModel)
+        if not should_retrain_model:
+            model.fit(self.data['train'])
+
         valid_error = model.backtest(
             series=self.data['train'].append(self.data['valid']),
             start=len(self.data['train']),
-            train_length=self.params.n_train_samples,
+            train_length=self.params.n_train_samples if should_retrain_model else None,
             stride=len(self.data['valid']) // self.params.n_backtest,
             metric=self.params.metric,
-            retrain=True,
+            retrain=should_retrain_model,
             verbose=True
         )
 
