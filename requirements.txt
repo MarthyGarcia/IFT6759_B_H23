@@ -7,3 +7,4 @@ gdown
 isort
 python-dotenv>=0.5.1
 darts
+optuna
