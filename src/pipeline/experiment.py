@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Type
+from typing import Type, Union
 
 from darts.dataprocessing import Pipeline
 from darts.models.forecasting.forecasting_model import ForecastingModel
@@ -10,12 +10,12 @@ class HyperParameter:
     Stores hyper parameter values
     """
     name: str
-    value: str | int | float
+    value: Union[str, int, float]
 
 @dataclass
 class BayesOptHyperParameter(HyperParameter):
     optuna_suggest_method: str
-    value: dict[str, str | int | float]
+    value: dict[str, Union[str, int, float]]
 
     def __post__init(self):
         if self.optuna_suggest_method and not self.optuna_suggest_method.startswith('suggest_'):
@@ -35,7 +35,7 @@ class Experiment:
     preprocessing: Pipeline
     model: Type[ForecastingModel]
     metric: callable
-    hyper_parameters: list[HyperParameter | BayesOptHyperParameter]
+    hyper_parameters: list[Union[HyperParameter, BayesOptHyperParameter]]
     horizon: int
     optuna_timeout: int
     n_train_samples: int
