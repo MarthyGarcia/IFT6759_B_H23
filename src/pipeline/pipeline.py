@@ -71,18 +71,30 @@ class ExperimentPipeline:
         # define and fit model
         model = self.params.model(**trial_hparams)
 
-        should_retrain_model = isinstance(model, LocalForecastingModel)
-        if not should_retrain_model:
-            model.fit(self.data['train'])
-
+        should_train_once = not isinstance(model, LocalForecastingModel)
+        
+        if should_train_once:
+            self._train_model(model, trial_hparams)
+            
         valid_error = model.backtest(
             series=self.data['train'].append(self.data['valid']),
             start=len(self.data['train']),
-            train_length=self.params.n_train_samples if should_retrain_model else None,
+            train_length=None if should_train_once else self.params.n_train_samples,
             stride=len(self.data['valid']) // self.params.n_backtest,
             metric=self.params.metric,
-            retrain=should_retrain_model,
+            retrain=not should_train_once,
             verbose=True
         )
 
         return valid_error if valid_error != np.nan else float("inf")
+    
+    def _train_model(self, model, hparams):
+        if 'pl_trainer_kwargs' in hparams:
+            # 80-20 split to monitor valid loss
+            train_loss, valid_loss = self.data['train'].split_before(.80)
+            model.fit(
+                series=train_loss,
+                val_series=valid_loss
+            )
+        else:
+            model.fit(series=self.data['train'])
