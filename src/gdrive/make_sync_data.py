@@ -8,7 +8,7 @@ from dotenv import find_dotenv, load_dotenv
 
 from src.gdrive.utils import download
 
-RAW_FOLDER_ID = "1gptmo-FDDLkVgj2zhrSwADaE9BK3CHqk"
+RAW_FOLDER_ID = "1RvJjkjOPxCeVk7zocLbeoOZ3wf3UEREe"
 
 
 @click.command()
